@@ -1,35 +1,34 @@
 package com.example.flutter_pigeon_plugin
 
+import android.util.Log
 import androidx.annotation.NonNull
-
 import io.flutter.embedding.engine.plugins.FlutterPlugin
-import io.flutter.plugin.common.MethodCall
-import io.flutter.plugin.common.MethodChannel
-import io.flutter.plugin.common.MethodChannel.MethodCallHandler
-import io.flutter.plugin.common.MethodChannel.Result
 
 /** FlutterPigeonPlugin */
-class FlutterPigeonPlugin: FlutterPlugin, MethodCallHandler {
-  /// The MethodChannel that will the communication between Flutter and native Android
-  ///
-  /// This local reference serves to register the plugin with the Flutter Engine and unregister it
-  /// when the Flutter Engine is detached from the Activity
-  private lateinit var channel : MethodChannel
+class FlutterPigeonPlugin : FlutterPlugin, Message.FlutterMessage {
+  lateinit var nativeMessage: Message.NativeMessage
 
-  override fun onAttachedToEngine(flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
-    channel = MethodChannel(flutterPluginBinding.binaryMessenger, "flutter_pigeon_plugin")
-    channel.setMethodCallHandler(this)
+  override fun onAttachedToEngine(
+      @NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding
+  ) {
+    Message.FlutterMessage.setUp(flutterPluginBinding.binaryMessenger, this)
+    nativeMessage = Message.NativeMessage(flutterPluginBinding.binaryMessenger)
   }
 
-  override fun onMethodCall(call: MethodCall, result: Result) {
-    if (call.method == "getPlatformVersion") {
-      result.success("Android ${android.os.Build.VERSION.RELEASE}")
-    } else {
-      result.notImplemented()
-    }
-  }
+  override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {}
 
-  override fun onDetachedFromEngine(binding: FlutterPlugin.FlutterPluginBinding) {
-    channel.setMethodCallHandler(null)
+  override fun flutterSendMessage(msg: Message.F2NMessage) {
+    Log.d("FlutterPigeonPlugin", msg.msg.toString())
+    var respMsg: Message.N2FMessage = Message.N2FMessage()
+    respMsg.msg2 = "Android的返回值"
+    nativeMessage.nativeSendMessage(respMsg, object : Message.VoidResult {
+      override fun success() {
+        Log.i("FlutterPigeonPlugin", "success")
+      }
+
+      override fun error(error: Throwable) {
+        Log.e("FlutterPigeonPlugin", "error", error)
+      }
+    })
   }
 }
